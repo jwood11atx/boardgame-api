@@ -22,7 +22,7 @@ app.use(cors(corsOptions))
 //     })
 // });
 
-app.get(`/recommendation?`, function(req, res){
+app.get(`/boardgames?`, function(req, res){
   var ids = req.query.id.split(",");
   var results = [];
   var count = 0;
@@ -219,8 +219,42 @@ app.get(`/xml?`, function(req, res){
 })
 
 
-
+app.get(`/recommendation?`, function(req, res){
+  // var key = Object.keys(req.query)[0];
+  // var values = req.query[key].split(",")
   // var results = [];
+  //
+  // values = values.map(function(e){
+  //   return cleanData(e)
+  // })
+  //
+  // for(var i=0; values.length>i; i++){
+  //   database.ref(`${key}/${values[i]}`).once("value")
+  //     .then(function(snapshot){
+  //       console.log(snapshot.val());
+  //     })
+
+  var key = Object.keys(req.query)[0];
+  var cleanValues = cleanData(req.query[key]).split(",");
+  var results = []
+
+  cleanValues.forEach(function(value, index){
+    database.ref(`${key}/${value}`).once("value")
+    .then(function(snapshot){
+      if(snapshot.val() !== null){
+        results.push(...snapshot.val());
+      }
+    })
+    .then(function(){
+      if(cleanValues.length-1 === index){
+        res.json(results)
+      }
+    })
+  })
+
+  // }
+
+
   // idList.forEach(function(id, i){
   //   cleanKeys = {};
   //   getBoardgameList(id)
@@ -254,6 +288,7 @@ app.get(`/xml?`, function(req, res){
   //       }
   //     })
   //  })
+})
 
   // getRecommendation(idList, res);
 
