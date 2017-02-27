@@ -3,8 +3,6 @@ var firefox = require("selenium-webdriver/firefox");
 var {firebase, database} = require("./firebase");
 
 var db = { Designers: {},
-           Artists: {},
-           Publishers: {},
            Categories: {},
            Mechanisms: {},
            Family: {}
@@ -23,15 +21,11 @@ function convertToObj(arr, id){
   var familyIndex = getIndex(arr, "Family");
 
   var designersArr = arr.slice(designersIndex+1, artistsIndex);
-  var artistsArr = arr.slice(artistsIndex+1, publishersIndex);
-  var publishersArr = arr.slice(publishersIndex+1, categoriesIndex);
   var categoriesArr = arr.slice(categoriesIndex+1, mechanismsIndex);
   var mechanismsArr = arr.slice(mechanismsIndex+1, familyIndex);
   var familyArr = arr.slice(familyIndex+1, arr.length);
 
   var boardgameObj = { Designers:  designersArr,
-                       Artists:    artistsArr,
-                       Publishers: publishersArr,
                        Categories: categoriesArr,
                        Mechanisms: mechanismsArr,
                        Family:     familyArr
@@ -41,15 +35,11 @@ function convertToObj(arr, id){
           .set(JSON.stringify(boardgameObj));
 
   updateDatabase("Designers", cleanData(designersArr), id);
-  updateDatabase("Artists", cleanData(artistsArr), id);
-  updateDatabase("Publishers", cleanData(publishersArr), id);
   updateDatabase("Categories", cleanData(categoriesArr), id);
   updateDatabase("Mechanisms", cleanData(mechanismsArr), id);
   updateDatabase("Family", cleanData(familyArr), id);
 
   database.ref("Designers").set(db.Designers);
-  database.ref("Artists").set(db.Artists);
-  database.ref("Publishers").set(db.Publishers);
   database.ref("Categories").set(db.Categories);
   database.ref("Mechanisms").set(db.Mechanisms);
   database.ref("Family").set(db.Family);

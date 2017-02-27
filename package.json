@@ -1,5 +1,5 @@
 {
-  "name": "db-build",
+  "name": "boardgame-api",
   "version": "1.0.0",
   "description": "",
   "main": "main.js",
@@ -7,9 +7,15 @@
     "cors": "^2.8.1",
     "express": "^4.14.1",
     "firebase": "^3.6.10",
-    "selenium-webdriver": "^3.1.0"
+    "selenium-webdriver": "^3.1.0",
+    "xml2json": "^0.11.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "babel": "^6.23.0",
+    "babel-core": "^6.23.1",
+    "babel-preset-es2015": "^6.22.0",
+    "promise": "^7.1.1"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -4,11 +4,14 @@ var {firebase, database} = require("./firebase");
 var express = require("express");
 var app = express();
 var cors = require('cors');
-// var getRecommendation = require("./recommender.js")
+var request = require("request");
+var xmlParser = require("xml2json");
+var Promises = require("promise");
 
 var corsOptions = {
   origin: 'http://localhost:8080'
 }
+
 
 app.use(cors(corsOptions))
 
@@ -20,26 +23,202 @@ app.use(cors(corsOptions))
 // });
 
 app.get(`/recommendation?`, function(req, res){
-  var key = Object.keys(req.query);
-  var cleanValues = cleanData(req.query[key]).split(",");
+  var ids = req.query.id.split(",");
+  var results = [];
+  var count = 0;
 
-  var results = []
-  cleanValues.forEach(function(value, index){
-    database.ref(`${key}/${value}`).once("value")
-    .then(function(snapshot){
-      results.push(...snapshot.val());
+  ids.forEach(function(id, i){
+    database.ref(`Boardgames/${id}`).once("value")
+    .then(function(snap){
+      return JSON.parse(snap.val());
+    })
+    .then(function(result){
+      count++;
+      if(result === null){
+        results.push({xml: id})
+      } else {
+        results.push(result);
+      }
     })
     .then(function(){
-      if(cleanValues.length-1 === index){
-        res.json(results)
+      if (count === ids.length) {
+        res.send(results)
       }
     })
   })
-
 })
 
-app.get(`/userBGlist?`, function(req, res){
-  var idList = req.query.id.split(",");
+
+
+
+  // results.forEach(function(e, i){
+  //   if(e["xml"]){
+  //     var id = e["xml"];
+  //     var result = null;
+  //       request.get(`https://www.boardgamegeek.com/xmlapi2/thing?id=${id}`, function (error, response, body) {
+  //       if (!error && response.statusCode == 200) {
+  //         var json = xmlParser.toJson(body)
+  //         json = JSON.parse(json);
+  //         json = json["items"]["item"]["link"];
+  //
+  //         json = json.reduce((obj, e) => {
+  //           switch (e.type) {
+  //             case "boardgamedesigner":
+  //             if (obj["Designers"]) {
+  //               obj["Designers"].push(e.value);
+  //               return obj;
+  //             } else {
+  //               obj["Designers"] = [e.value];
+  //               return obj;
+  //             }
+  //
+  //             case "boardgamecategory":
+  //             if (obj["Categories"]) {
+  //               obj["Categories"].push(e.value);
+  //               return obj;
+  //             } else {
+  //               obj["Categories"] = [e.value];
+  //               return obj;
+  //             }
+  //
+  //             case "boardgamemechanic":
+  //             if (obj["Mechanisms"]) {
+  //               obj["Mechanisms"].push(e.value);
+  //               return obj;
+  //             } else {
+  //               obj["Mechanisms"] = [e.value];
+  //               return obj;
+  //             }
+  //
+  //             case "boardgamefamily":
+  //             if (obj["Family"]) {
+  //               obj["Family"].push(e.value);
+  //               return obj;
+  //             } else {
+  //               obj["Family"] = [e.value];
+  //               return obj;
+  //             }
+  //
+  //             default:
+  //             return obj;
+  //           }
+  //         }, {})
+  //         count++;
+  //
+  //         console.log("WHATKJ!@LK!JL@K$J!L@K$");
+  //         results.push("laksdjf;abjeofabjoefbao;webfoabwefo")
+  //       }
+  //     })
+  //   } else {
+  //     count++;
+  //   }
+  //   if(results.length-1 == count){
+  //     console.log(count);
+  //     console.log(result);
+  //     resolve()
+  //   }
+  // })
+
+
+
+  // .then(function(){
+  //   promise2;
+  //   })
+  //   // console.log(results);
+  // })
+
+
+
+  // var key = Object.keys(req.query);
+  // var cleanValues = cleanData(req.query[key]).split(",");
+  //
+  // console.log(key);
+  //
+  // var results = []
+  // cleanValues.forEach(function(value, index){
+  //   database.ref(`${key}/${value}`).once("value")
+  //   .then(function(snapshot){
+  //     results.push(...snapshot.val());
+  //   })
+  //   .then(function(){
+  //     if(cleanValues.length-1 === index){
+  //       res.json(results)
+  //     }
+  //   })
+  // })
+
+// })
+
+// function getMyData() {
+//     var def=q.defer();
+//     request.get('http://someurl/file.json', function(err, response, body) {
+//         def.resolve(response.Name1.prop);
+//     })
+//     return def.promise();
+// }
+
+
+/////below will be a function to call when game id is not in firebase
+
+// app.get(`/userBGlist?`, function(req, res){
+app.get(`/xml?`, function(req, res){
+  var id = req.query.id;
+
+  var result = null;
+  request(`https://www.boardgamegeek.com/xmlapi2/thing?id=${id}`, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      var json = xmlParser.toJson(body)
+      json = JSON.parse(json);
+      json = json["items"]["item"]["link"];
+
+      json = json.reduce((obj, e) => {
+        switch (e.type) {
+          case "boardgamedesigner":
+          if (obj["Designers"]) {
+            obj["Designers"].push(e.value);
+            return obj;
+          } else {
+            obj["Designers"] = [e.value];
+            return obj;
+          }
+
+          case "boardgamecategory":
+          if (obj["Categories"]) {
+            obj["Categories"].push(e.value);
+            return obj;
+          } else {
+            obj["Categories"] = [e.value];
+            return obj;
+          }
+
+          case "boardgamemechanic":
+          if (obj["Mechanisms"]) {
+            obj["Mechanisms"].push(e.value);
+            return obj;
+          } else {
+            obj["Mechanisms"] = [e.value];
+            return obj;
+          }
+
+          case "boardgamefamily":
+          if (obj["Family"]) {
+            obj["Family"].push(e.value);
+            return obj;
+          } else {
+            obj["Family"] = [e.value];
+            return obj;
+          }
+
+          default:
+          return obj;
+        }
+      }, {})
+      res.send(json);
+    }
+  })
+})
+
+
 
   // var results = [];
   // idList.forEach(function(id, i){
@@ -111,19 +290,19 @@ app.get(`/userBGlist?`, function(req, res){
   //     })
   //   })
 
-  var response = [];
-  idList.forEach(function(id, index){
-    database.ref(`Boardgames/${id}`).once("value")
-      .then(function(snapshot){
-        response.push(JSON.parse(snapshot.val()));
-      })
-      .then(function(){
-        if(index === idList.length-1){
-          res.json(response);
-        }
-      })
-    })
-})
+  // var response = [];
+  // idList.forEach(function(id, index){
+  //   database.ref(`Boardgames/${id}`).once("value")
+  //     .then(function(snapshot){
+  //       response.push(JSON.parse(snapshot.val()));
+  //     })
+  //     .then(function(){
+  //       if(index === idList.length-1){
+  //         res.json(response);
+  //       }
+  //     })
+  //   })
+// })
 
 // var getRecommendation = function(idList, res){
 //   var results = [];
