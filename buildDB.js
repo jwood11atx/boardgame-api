@@ -151,3 +151,4 @@ runMain();
 driver.quit()
 
 // ^-----------------CODE IS GOOD---------------------^
+module.exports = {cleanData};
