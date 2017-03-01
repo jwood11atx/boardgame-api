@@ -17,6 +17,7 @@ app.use(cors(corsOptions))
 app.get(`/boardgames?`, function(req, res){
   var ids = req.query.id.split(",");
   var results = [];
+  var xmlList = [];
   var count = 0;
 
   ids.forEach(function(id, i){
@@ -27,79 +28,107 @@ app.get(`/boardgames?`, function(req, res){
     .then(function(result){
       count++;
       if(result === null){
-        results.push({xml: id})
+        xmlList.push(id);
       } else {
         results.push(result);
       }
     })
     .then(function(){
       if (count === ids.length) {
-        res.send(results)
+        if(xmlList.length > 0){
+          results.push({xml: xmlList})
+          res.send(results);
+        } else {
+          res.send(results);
+        }
       }
     })
   })
 })
 
-app.get(`/xml?`, function(req, res){
-  var id = req.query.id;
-
-  var result = null;
-  request(`https://www.boardgamegeek.com/xmlapi2/thing?id=${id}`, function (error, response, body) {
-    if (!error && response.statusCode == 200) {
-      var json = xmlParser.toJson(body)
-      json = JSON.parse(json);
-      json = json["items"]["item"]["link"];
-
-      json = json.reduce((obj, e) => {
-        switch (e.type) {
-          case "boardgamedesigner":
-          if (obj["Designers"]) {
-            obj["Designers"].push(e.value);
-            return obj;
-          } else {
-            obj["Designers"] = [e.value];
-            return obj;
-          }
-
-          case "boardgamecategory":
-          if (obj["Categories"]) {
-            obj["Categories"].push(e.value);
-            return obj;
-          } else {
-            obj["Categories"] = [e.value];
-            return obj;
-          }
-
-          case "boardgamemechanic":
-          if (obj["Mechanisms"]) {
-            obj["Mechanisms"].push(e.value);
-            return obj;
-          } else {
-            obj["Mechanisms"] = [e.value];
-            return obj;
-          }
-
-          case "boardgamefamily":
-          if (obj["Family"]) {
-            obj["Family"].push(e.value);
-            return obj;
-          } else {
-            obj["Family"] = [e.value];
-            return obj;
-          }
-
-          default:
-          return obj;
-        }
-      }, {})
-      res.send(json);
+app.get(`/hotness`, function(req, res){
+  request("https://bgg-json.azurewebsites.net/hot",
+  function(error, response, body){
+    if (!error && response.statusCode == 200){
+      res.send(body);
     }
   })
 })
 
+app.get(`/list?`, function(req, res){
+  var ids = req.query.id;
+
+  request(`https://www.boardgamegeek.com/xmlapi2/thing?id=${ids}&type=boardgame`,
+  function(error, response, body){
+    if (!error && response.statusCode == 200){
+      var json = xmlParser.toJson(body);
+      json = JSON.parse(json);
+      if(json.items)
+        res.send(json.items.item);
+    }
+  })
+})
+
+app.get(`/xml?`, function(req, res){
+  var ids = req.query.id;
+  var results = [];
+
+  request(`https://www.boardgamegeek.com/xmlapi2/thing?id=${ids}&type=boardgame`,
+  function (error, response, body){
+    if (!error && response.statusCode == 200){
+      var json = xmlParser.toJson(body);
+      json = JSON.parse(json);
+      json.items.item.forEach(function(data){
+        var newObj =
+        data.link.reduce((obj, e) => {
+          switch (e.type) {
+            case "boardgamedesigner":
+            if (obj["Designers"]) {
+              obj["Designers"].push(e.value);
+              return obj;
+            } else {
+              obj["Designers"] = [e.value];
+              return obj;
+            }
+
+            case "boardgamecategory":
+            if (obj["Categories"]) {
+              obj["Categories"].push(e.value);
+              return obj;
+            } else {
+              obj["Categories"] = [e.value];
+              return obj;
+            }
+
+            case "boardgamemechanic":
+            if (obj["Mechanisms"]) {
+              obj["Mechanisms"].push(e.value);
+              return obj;
+            } else {
+              obj["Mechanisms"] = [e.value];
+              return obj;
+            }
+
+            case "boardgamefamily":
+            if (obj["Family"]) {
+              obj["Family"].push(e.value);
+              return obj;
+            } else {
+              obj["Family"] = [e.value];
+              return obj;
+            }
+            default:
+            return obj;
+          }
+        }, {})
+        results.push(newObj);
+      })
+      res.send(results);
+    }
+  })
+})
 
 app.get(`/recommendation?`, function(req, res){
-
   var key = Object.keys(req.query)[0];
   var cleanValues = cleanData(req.query[key]).split(",");
   var results = []
@@ -119,6 +148,22 @@ app.get(`/recommendation?`, function(req, res){
   })
 })
 
+app.get(`/search?`, function(req, res){
+  var search = req.query.id;
+
+  request(`https://www.boardgamegeek.com/xmlapi2/search?query=${search}&type=boardgame`,
+  function (error, response, body){
+    if (!error && response.statusCode == 200){
+      var json = xmlParser.toJson(body);
+      var gameList = JSON.parse(json);
+      gameList = gameList.items.item.map(function(game){
+        return game.id;
+      })
+      res.send(gameList);
+    }
+  })
+})
+
 function cleanData(data){
   if(typeof data == "object"){
     return data.map(function(e){
@@ -128,7 +173,6 @@ function cleanData(data){
     return data.split(/[\.#$/\]\[\s]/g).join("_");
   }
 }
-
 
 app.listen(3000, function(){
   console.log("listening to port 3000");
