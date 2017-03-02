@@ -75,7 +75,7 @@ function getURLs(){
   var urls = [];
   driver.sleep(100)
   .then(function(){
-    for(var i=48; 51>=i; i++){
+    for(var i=1; 100>=i; i++){
       driver.findElement(By.css(`#results_objectname${i} > a`))
       .then(function(link){
         link.getAttribute("href")
@@ -122,8 +122,8 @@ function getData(url){
 
 function runMain(){
   var path = "";
-  var pageNum = 19;
-  for(var i=1; 2>=i; i++){
+  var pageNum = 1;
+  for(var i=1; 10>=i; i++){
     driver.sleep(100)
     .then(function(){
       if(pageNum != 1){

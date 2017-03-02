@@ -1,11 +1,12 @@
 var firebase = require("firebase");
 
 var config = {
-  apiKey: "AIzaSyA6dAV3gwmGQXotavP3j58sgwKFop3LUiM",
-  authDomain: "bgg-api-test.firebaseapp.com",
-  databaseURL: "https://bgg-api-test.firebaseio.com",
-  storageBucket: "bgg-api-test.appspot.com",
-  messagingSenderId: "394321547983"
+  apiKey: "AIzaSyDiGACkmSXuANAozKI4MxTr2vnYEmP-lqk",
+  authDomain: "boardgame-app-db.firebaseapp.com",
+  databaseURL: "https://boardgame-app-db.firebaseio.com",
+  storageBucket: "boardgame-app-db.appspot.com",
+  messagingSenderId: "157620636752"
+
 };
 firebase.initializeApp(config);
 
