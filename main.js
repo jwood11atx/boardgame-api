@@ -58,7 +58,7 @@ app.get(`/hotness`, function(req, res){
 app.get(`/list?`, function(req, res){
   var ids = req.query.id;
 
-  request(`https://www.boardgamegeek.com/xmlapi2/thing?id=${ids}&type=boardgame`,
+  request(`https://www.boardgamegeek.com/xmlapi2/thing?id=${ids}`,
   function(error, response, body){
     if (!error && response.statusCode == 200){
       var json = xmlParser.toJson(body);
@@ -73,7 +73,7 @@ app.get(`/xml?`, function(req, res){
   var ids = req.query.id;
   var results = [];
 
-  request(`https://www.boardgamegeek.com/xmlapi2/thing?id=${ids}&type=boardgame`,
+  request(`https://www.boardgamegeek.com/xmlapi2/thing?id=${ids}`,
   function (error, response, body){
     if (!error && response.statusCode == 200){
       var json = xmlParser.toJson(body);
@@ -149,17 +149,27 @@ app.get(`/recommendation?`, function(req, res){
 })
 
 app.get(`/search?`, function(req, res){
-  var search = req.query.id;
+  var search = req.query.id.split(" ").join("+");
+  var exact = req.query.exact
 
-  request(`https://www.boardgamegeek.com/xmlapi2/search?query=${search}&type=boardgame`,
+  request(`https://www.boardgamegeek.com/xmlapi2/search?query=${search}&type=boardgame&exact=${exact}`,
   function (error, response, body){
     if (!error && response.statusCode == 200){
       var json = xmlParser.toJson(body);
       var gameList = JSON.parse(json);
-      gameList = gameList.items.item.map(function(game){
-        return game.id;
-      })
-      res.send(gameList);
+      if(gameList.items.total == 0){
+        res.send([])
+      } else {
+        gameList = gameList.items.item;
+        if(gameList.length > 1){
+          gameList = gameList.map(function(game){
+            return game.id;
+          })
+          res.send(gameList);
+        } else {
+          res.send([gameList.id]);
+        }
+      }
     }
   })
 })

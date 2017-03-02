@@ -123,7 +123,7 @@ function getData(url){
 function runMain(){
   var path = "";
   var pageNum = 1;
-  for(var i=1; 2>=i; i++){
+  for(var i=1; 10>=i; i++){
     driver.sleep(100)
     .then(function(){
       if(pageNum != 1){
