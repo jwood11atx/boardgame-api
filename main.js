@@ -1,5 +1,3 @@
-var webdriver = require("selenium-webdriver");
-var firefox = require("selenium-webdriver/firefox");
 var {firebase, database} = require("./firebase");
 var express = require("express");
 var app = express();
@@ -13,6 +11,13 @@ var corsOptions = {
 }
 
 app.use(cors(corsOptions))
+
+app.get(`/all`, function(req, res){
+  database.ref("Boardgames").once("value")
+  .then(function(snap){
+    console.log(Object.keys(snap.val()).length);
+  })
+})
 
 app.get(`/boardgames?`, function(req, res){
   var ids = req.query.id.split(",");
@@ -150,6 +155,7 @@ app.get(`/recommendation?`, function(req, res){
 
 app.get(`/search?`, function(req, res){
   var search = req.query.id.split(" ").join("+");
+  console.log(req.query.id);
   var exact = req.query.exact
 
   request(`https://www.boardgamegeek.com/xmlapi2/search?query=${search}&type=boardgame&exact=${exact}`,

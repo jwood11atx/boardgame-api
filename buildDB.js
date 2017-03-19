@@ -1,85 +1,101 @@
-var webdriver = require("selenium-webdriver");
-var firefox = require("selenium-webdriver/firefox");
-var {firebase, database} = require("./firebase");
+const webdriver = require("selenium-webdriver");
+const firefox = require("selenium-webdriver/firefox");
+const environment = process.env.NODE_ENV || 'development';
+const configuration = require('./knexfile')[environment];
+const database = require('knex')(configuration);
 
-var db = { Designers: {},
-           Categories: {},
-           Mechanisms: {},
-           Family: {}
-         }
-
-function getIndex(arr, str1, str2){
+const getIndex = (arr, str1, str2) => {
   return arr.indexOf(str1) != -1 ? arr.indexOf(str1) : arr.indexOf(str2)
 }
 
-function convertToObj(arr, id){
-  var designersIndex = getIndex(arr, "Designers", "Designer");
-  var artistsIndex = getIndex(arr, "Artists", "Artist");
-  var publishersIndex = getIndex(arr, "Publishers", "Publisher");
-  var categoriesIndex = getIndex(arr, "Categories", "Category");
-  var mechanismsIndex = getIndex(arr, "Mechanisms", "Mechanism");
-  var familyIndex = getIndex(arr, "Family");
+const convertToObj = (arr, id) => {
+  const designersIndex = getIndex(arr, "Designers", "Designer");
+  const artistsIndex = getIndex(arr, "Artists", "Artist");
+  const publishersIndex = getIndex(arr, "Publishers", "Publisher");
+  const categoriesIndex = getIndex(arr, "Categories", "Category");
+  const mechanismsIndex = getIndex(arr, "Mechanisms", "Mechanism");
+  const familyIndex = getIndex(arr, "Family");
 
-  var designersArr = arr.slice(designersIndex+1, artistsIndex);
-  var categoriesArr = arr.slice(categoriesIndex+1, mechanismsIndex);
-  var mechanismsArr = arr.slice(mechanismsIndex+1, familyIndex);
-  var familyArr = arr.slice(familyIndex+1, arr.length);
+  const designersArr = arr.slice(designersIndex+1, artistsIndex);
+  const categoriesArr = arr.slice(categoriesIndex+1, mechanismsIndex);
+  const mechanismsArr = arr.slice(mechanismsIndex+1, familyIndex);
+  const familiesArr = arr.slice(familyIndex+1, arr.length);
 
-  var boardgameObj = { Designers:  designersArr,
-                       Categories: categoriesArr,
-                       Mechanisms: mechanismsArr,
-                       Family:     familyArr
-                     };
+  const title = arr[getIndex(arr, "Primary Name")+1];
+  const boardgame = {title, id, created_at: new Date()};
 
-  database.ref(`Boardgames/${id}`)
-          .set(JSON.stringify(boardgameObj));
+  database("boardgames").insert(boardgame)
+  .then(() => {
+    database("boardgames").select();
+  });
 
-  updateDatabase("Designers", cleanData(designersArr), id);
-  updateDatabase("Categories", cleanData(categoriesArr), id);
-  updateDatabase("Mechanisms", cleanData(mechanismsArr), id);
-  updateDatabase("Family", cleanData(familyArr), id);
-
-  database.ref("Designers").set(db.Designers);
-  database.ref("Categories").set(db.Categories);
-  database.ref("Mechanisms").set(db.Mechanisms);
-  database.ref("Family").set(db.Family);
+  updateTypeTables(designersArr, "designers", "designer_id", id);
+  updateTypeTables(categoriesArr, "categories", "category_id", id);
+  updateTypeTables(mechanismsArr, "mechanisms", "mechanism_id", id);
+  updateTypeTables(familiesArr, "families", "family_id", id);
 }
 
-function cleanData(data){
-  if(typeof data == "object"){
-    return data.map(function(e){
-      return e.split(/[\.#$/\]\[\s]/g).join("_");
+const updateTypeTables = (typeArr, typeStr, type_id, boardgame_id) => {
+  typeArr.forEach((type) => {
+    database(typeStr).where("type", type).select()
+      .then((selection) => {
+        if(selection.length === 0){
+          database(typeStr).insert({type, created_at: new Date()})
+            .then(() => {
+              updateJoinTables(type, typeArr, typeStr, type_id, boardgame_id);
+            })
+        } else {
+          updateJoinTables(type, typeArr, typeStr, type_id, boardgame_id, selection);
+        }
+      });
+  })
+}
+
+const insertData = (typeStr, type_id, boardgame_id, result) => {
+  database(`boardgame_${typeStr}`).insert(
+    {
+      boardgame_id,
+      [type_id]: result[0].id,
+      created_at: new Date()
+    }
+  )
+    .then(() => {
+      database(`boardgame_${typeStr}`).select();
     })
+}
+
+const updateJoinTables = (type, typeArr, typeStr, type_id, boardgame_id, result) => {
+  let dataObj = {};
+  if (result) {
+    insertData(typeStr, type_id, boardgame_id, result)
   } else {
-    return data.split(/[\.#$/\]\[\s]/g).join("_");
+    database(typeStr).where("type", type).select()
+    .then((result) => {
+      insertData(typeStr, type_id, boardgame_id, result)
+    })
   }
 }
 
-function updateDatabase(key, arr, id){
-  arr.forEach(function(e){
-    db[key][e] ? db[key][e].push(id) : db[key][e] = [id];
-  })
-}
 
 //--------------------SCRAPE CODE---------------------//
 // v-----------------CODE IS GOOD---------------------v
 // //
-var By = webdriver.By;
-var until = webdriver.until;
+const By = webdriver.By;
+const until = webdriver.until;
 
-var driver = new webdriver.Builder()
+const driver = new webdriver.Builder()
 .forBrowser("firefox")
 .build();
 
-function getURLs(){
-  var urls = [];
-  driver.sleep(100)
-  .then(function(){
-    for(var i=1; 100>=i; i++){
+getURLs = () => {
+  let urls = [];
+  driver.sleep()
+  .then(() => {
+    for(let i=1; 100>=i; i++){
       driver.findElement(By.css(`#results_objectname${i} > a`))
-      .then(function(link){
+      .then((link) => {
         link.getAttribute("href")
-        .then(function(url){
+        .then((url) => {
           urls.push(url + "/credits")
         })
       })
@@ -88,56 +104,56 @@ function getURLs(){
   return urls;
 }
 
-function getData(url){
+const getData = (url) => {
   driver.get(url);
 
-  driver.sleep(500)
-  var bgArray = [];
-  var bgID = null;
+  driver.sleep()
+  let bgArray = [];
+  let bgID = null;
   driver.getCurrentUrl()
-  .then(function(url){
-    var urlArray = url.split("/");
+  .then((url) => {
+    const urlArray = url.split("/");
     bgID = urlArray[urlArray.indexOf("boardgame")+1]
   })
 
   driver.findElements(By.css(".outline-item"))
-  .then(function(arr){
-    arr.map(function(e){
+  .then((arr) => {
+    arr.map((e) => {
       e.getText()
-      .then(function(text){
+      .then((text) => {
         bgArray.push(text);
       })
     })
   })
 
-  driver.sleep(500)
-  .then(function(){
-    bgArray = bgArray.map(function(e){
+  driver.sleep()
+  .then(() => {
+    bgArray = bgArray.map((e) => {
       return e.split("\n")
     })
     bgArray = bgArray.join(",").split(",");
-    var data = convertToObj(bgArray, bgID)
+    convertToObj(bgArray, bgID);
   })
 }
 
-function runMain(){
-  var path = "";
-  var pageNum = 1;
-  for(var i=1; 10>=i; i++){
-    driver.sleep(100)
-    .then(function(){
+ runMain = () => {
+  let path = "";
+  let pageNum = 1;
+  for(let i=1; 30>=i; i++){
+    driver.sleep()
+    .then(() => {
       if(pageNum != 1){
         path = `/page/${pageNum}`
       }
       pageNum++;
       driver.get(`https://boardgamegeek.com/browse/boardgame${path}`)
-      .then(function(){
-        driver.sleep(2000)
-        .then(function(){
+      .then(() => {
+        driver.sleep(1000)
+        .then(() => {
           return getURLs();
         })
-        .then(function(urls){
-          urls.forEach(function(url){
+        .then((urls) => {
+          urls.forEach((url) => {
             getData(url);
           })
         })
@@ -151,4 +167,3 @@ runMain();
 driver.quit()
 
 // ^-----------------CODE IS GOOD---------------------^
-module.exports = {cleanData};
